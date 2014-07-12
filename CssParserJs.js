@@ -433,7 +433,8 @@
             arrStrings = [],
             objCharacterBuffer = {
                 CharacterCategorisation: null,
-                Characters: []
+                Characters: [],
+                IndexInSource: null
             };
         
         for (intIndex = 0; intIndex < arrCategorisedCharacters.length; intIndex++) {
@@ -452,23 +453,27 @@
             if (objCharacterBuffer.Characters.length > 0) {
                 arrStrings.push({
                     CharacterCategorisation: objCharacterBuffer.CharacterCategorisation,
-                    Value: objCharacterBuffer.Characters.join("")
+                    Value: objCharacterBuffer.Characters.join(""),
+                    IndexInSource: objCharacterBuffer.IndexInSource
                 });
             }
             
             if (bCharacterShouldNotBeGrouped) {
                 arrStrings.push({
                     CharacterCategorisation: objCategorisedCharacter.CharacterCategorisation,
-                    Value: objCategorisedCharacter.Character
+                    Value: objCategorisedCharacter.Character,
+                    IndexInSource: intIndex
                 });
                 objCharacterBuffer = {
                     CharacterCategorisation: null,
-                    Characters: []
+                    Characters: [],
+                    IndexInSource: null
                 };
             } else {
                 objCharacterBuffer = {
                     CharacterCategorisation: objCategorisedCharacter.CharacterCategorisation,
-                    Characters: [ objCategorisedCharacter.Character ]
+                    Characters: [ objCategorisedCharacter.Character ],
+                    IndexInSource: intIndex
                 };
             }
         }
@@ -476,7 +481,8 @@
         if (objCharacterBuffer.Characters.length > 0) {
             arrStrings.push({
                 CharacterCategorisation: objCharacterBuffer.CharacterCategorisation,
-                Value: objCharacterBuffer.Characters.join("")
+                Value: objCharacterBuffer.Characters.join(""),
+                IndexInSource: objCharacterBuffer.IndexInSource
             });
         }
         
