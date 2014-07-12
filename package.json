@@ -1,0 +1,14 @@
+{
+  "name": "cssparserjs",
+  "description": "A simple CSS Parser for JavaScript",
+  "homepage": "https://bitbucket.org/DanRoberts/cssparserjs",
+  "author": "Dan Roberts <dangger36@gmail.com>",
+  "main": "CssParserJs.js",
+  "version": "0.9.0",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://bitbucket.org/DanRoberts/cssparserjs/src/4a9bb17f5a8a4fc0c2c164625b9dc3b8f7a03058/LICENSE.txt"
+    }
+  ]
+}
