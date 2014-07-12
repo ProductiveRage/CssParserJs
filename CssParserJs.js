@@ -629,7 +629,6 @@
         var getSegmentEnumerator,
             getPropertyValueBuffer,
             getSelectorSet,
-            getWhiteSpaceNormalisedString,
             trim,
             getNumberOfLineReturnsFromContentIfAny,
             parseIntoStructuredDataPartial;
@@ -687,11 +686,6 @@
                 arrTidiedSelectors.push(arrSelectors[intIndex].join(" "));
             }
             return arrTidiedSelectors;
-        };
-        
-        // TODO: Is this required????! (If not, remove the var)
-        getWhiteSpaceNormalisedString = function (strValue) {
-            return trim(strValue.replace(/\s+/g, " "));
         };
         
         trim = function (strValue) {
