@@ -1,4 +1,4 @@
-/*jslint continue:true,plusplus:true*/
+/*jslint vars: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
 (function () {
     "use strict";
     
@@ -176,17 +176,13 @@
         ];
 
         isNextWordOneOfThePseudoClasses = function (objStringNavigator) {
-            var intIndex;
             // Skip over any whitespace to find the start of the next content
             while (objStringNavigator.IsWhitespace) {
                 objStringNavigator = objStringNavigator.GetNext();
             }
-            for (intIndex = 0; intIndex < arrPseudoClasses.length; intIndex++) {
-                if (objStringNavigator.DoesCurrentContentMatch(arrPseudoClasses[intIndex])) {
-                    return true;
-                }
-            }
-            return false;
+            return arrPseudoClasses.some(function (strPseudoClass) {
+                return objStringNavigator.DoesCurrentContentMatch(strPseudoClass);
+            });
         };
 
         getBracketedSelectorSegment = function (bSupportSingleLineComments, chrCloseBracketCharacter, objProcessorToReturnTo) {
@@ -428,27 +424,22 @@
     };
     
     groupCharacters = function (arrCategorisedCharacters) {
-        var intIndex,
-            objCategorisedCharacter,
-            bCharacterShouldNotBeGrouped,
-            arrStrings = [],
+        var arrStrings = [],
             objCharacterBuffer = {
                 CharacterCategorisation: null,
                 Characters: [],
                 IndexInSource: null
             };
         
-        for (intIndex = 0; intIndex < arrCategorisedCharacters.length; intIndex++) {
-            objCategorisedCharacter = arrCategorisedCharacters[intIndex];
-            
-            bCharacterShouldNotBeGrouped = (
+        arrCategorisedCharacters.forEach(function (objCategorisedCharacter, intIndex) {
+            var bCharacterShouldNotBeGrouped = (
                 (objCategorisedCharacter.CharacterCategorisation === CharacterCategorisationOptions.CloseBrace) ||
                 (objCategorisedCharacter.CharacterCategorisation === CharacterCategorisationOptions.OpenBrace) ||
                 (objCategorisedCharacter.CharacterCategorisation === CharacterCategorisationOptions.SemiColon)
             );
             if ((objCategorisedCharacter.CharacterCategorisation === objCharacterBuffer.CharacterCategorisation) && !bCharacterShouldNotBeGrouped) {
                 objCharacterBuffer.Characters.push(objCategorisedCharacter.Character);
-                continue;
+                return;
             }
             
             if (objCharacterBuffer.Characters.length > 0) {
@@ -477,7 +468,7 @@
                     IndexInSource: intIndex
                 };
             }
-        }
+        });
         
         if (objCharacterBuffer.Characters.length > 0) {
             arrStrings.push({
@@ -586,16 +577,14 @@
                     arrSelectorBuffer = [],
                     arrSelectorSegmentBuffer = [],
                     objProcessor = getDefaultSelectorProcessor(),
-                    intIndex,
-                    chrCurrent,
                     objSelectorProcessorResult;
-
-                for (intIndex = 0; intIndex <= strSelector.length; intIndex++) {
+                
+                // Include an extra character on the end so that there's an extra pass through the loop where the EndOfSelector categorisation is specified (and the
+                // extra character ignored)
+                strSelector.split("").concat([" "]).forEach(function (chrCurrent, intIndex) {
                     if (intIndex === strSelector.length) {
-                        chrCurrent = null;
                         objSelectorProcessorResult = getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelector, objProcessor);
                     } else {
-                        chrCurrent = strSelector.charAt(intIndex);
                         objSelectorProcessorResult = objProcessor.Process(chrCurrent);
                     }
                     if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.SelectorSegment) {
@@ -619,7 +608,7 @@
                     }
 
                     objProcessor = objSelectorProcessorResult.NextProcessor;
-                }
+                });
                 return arrSelectors;
             }
         };
@@ -641,7 +630,7 @@
                 },
                 MoveNext: function () {
                     if (intIndex < arrSegments.length) {
-                        intIndex++;
+                        intIndex = intIndex + 1;
                     }
                     return (intIndex < arrSegments.length);
                 }
@@ -680,11 +669,10 @@
         getSelectorSet = function (strSelectors) {
 			// Using the SelectorBreaker means that any quoting, square brackets or other escaping is taken into account
             var arrSelectors = objSelectorBreaker.Break(strSelectors),
-                arrTidiedSelectors = [],
-                intIndex;
-            for (intIndex = 0; intIndex < arrSelectors.length; intIndex++) {
-                arrTidiedSelectors.push(arrSelectors[intIndex].join(" "));
-            }
+                arrTidiedSelectors = [];
+            arrSelectors.forEach(function (arrSelectorSegments) {
+                arrTidiedSelectors.push(arrSelectorSegments.join(" "));
+            });
             return arrTidiedSelectors;
         };
         
