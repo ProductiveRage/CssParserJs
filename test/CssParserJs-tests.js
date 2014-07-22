@@ -170,5 +170,73 @@
             ];
 		deepEqual(CssParserJs.ParseLess(content), expected);
 	});
+    
+    test('MediaQueryWrappedHierachicalParser', function () {
+        var content = "div.w1, div.w2 {\n  p {\n    strong, em { font-weight: bold; }\n  }\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                "Selectors": [ "div.w1", "div.w2" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                    "Selectors": [ "p" ],
+                    "ParentSelectors": [ [ "div.w1", "div.w2" ] ],
+                    "ChildFragments": [{
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                        "Selectors": [ "strong", "em" ],
+                        "ParentSelectors": [ [ "div.w1", "div.w2" ], [ "p" ] ],
+                        "ChildFragments": [{
+                            "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                            "Value": "font-weight",
+                            "SourceLineIndex": 2
+                        }, {
+                            "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                            "Property": {
+                                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                                "Value": "font-weight",
+                                "SourceLineIndex": 2
+                            },
+                            "Values": [ "bold" ],
+                            "SourceLineIndex": 2
+                        }],
+                        "SourceLineIndex": 2
+                    }],
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
+
+    test('MediaQueryWrappedHierachicalParser', function () {
+        var content = "@media screen and (min-width: 600px) {\n  body {\n    background: white url(\"awesomecats.png\") no-repeat;\n  }\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.MediaQuery,
+                "Selectors": [ "@media screen and (min-width: 600px)" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "ChildFragments": [{
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                        "Value": "background",
+                        "SourceLineIndex": 2
+                    }, {
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                        "Property": {
+                            "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                            "Value": "background",
+                            "SourceLineIndex": 2
+                        },
+                        "Values": [ "white", "url(\"awesomecats.png\")", "no-repeat" ],
+                        "SourceLineIndex": 2
+                    }],
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                    "Selectors": [ "body" ],
+                    "ParentSelectors": [ [ "@media screen and (min-width: 600px)" ] ],
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
 
 }());
