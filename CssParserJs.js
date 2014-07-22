@@ -1,5 +1,7 @@
 /*jslint vars: true, devel: true, nomen: true, indent: 4, maxerr: 50 */
-(function () {
+/*global define, require, module */
+(this.define || function (f) { "use strict"; var n = "CssParserJs", r = f((typeof (require) === "undefined") ? function () { } : require); if ((typeof (module) !== "undefined") && module.exports) { module.exports = r; } else { this[n] = r; } }).call(this, function (require) {
+
     "use strict";
     
     var CharacterCategorisationOptions, objCharacterProcessors, getCharacterPositionStringNavigator, processCharacters, groupCharacters, CssParserJs;
@@ -481,7 +483,7 @@
         return arrStrings;
     };
     
-    this.CssParserJs = CssParserJs = {
+    CssParserJs = {
         CharacterCategorisationOptions: CharacterCategorisationOptions,
         ParseCss: function (strValue) {
             return groupCharacters(processCharacters(objCharacterProcessors.GetNewCssProcessor(), strValue));
@@ -490,442 +492,438 @@
             return groupCharacters(processCharacters(objCharacterProcessors.GetNewLessProcessor(), strValue));
         }
     };
-}.call(this));
 
-// This is entirely separate and can be removed if not required, it layers onto the above CssParserJs
-(function () {
-    "use strict";
+    // Now that the CssParserJs reference has been prepared, with the basic character categorisation, the next layer is added to the API, where
+    // content is parsed into a hierarchical structure
+    (function () {
+        var objSelectorBreaker,
+            objHierarchicalParser,
+            FragmentCategorisationOptions;
 
-    var objSelectorBreaker,
-        objHierarchicalParser,
-        FragmentCategorisationOptions,
-        CssParserJs = this.CssParserJs;
-    if (!CssParserJs) {
-        throw new Error("CssParserJs required but not present");
-    }
-    
-    objSelectorBreaker = (function () {
-        var CharacterCategorisationOptions,
-            getSelectorProcessorResult,
-            getDefaultSelectorProcessor,
-            getAttributeSelectorProcessor,
-            getQuotedSelectorProcessor;
-        
-        CharacterCategorisationOptions = {
-            EndOfSelector: 0,
-            EndOfSelectorSegment: 1,
-            SelectorSegment: 2
-        };
+        objSelectorBreaker = (function () {
+            var CharacterCategorisationOptions,
+                getSelectorProcessorResult,
+                getDefaultSelectorProcessor,
+                getAttributeSelectorProcessor,
+                getQuotedSelectorProcessor;
 
-        getSelectorProcessorResult = function (intCharacterCategorisation, objNextProcessor) {
-            return {
-                CharacterCategorisation: intCharacterCategorisation,
-                NextProcessor: objNextProcessor
+            CharacterCategorisationOptions = {
+                EndOfSelector: 0,
+                EndOfSelectorSegment: 1,
+                SelectorSegment: 2
             };
-        };
 
-        getDefaultSelectorProcessor = function () {
-            var objProcessor = {
-                Process: function (chrCurrent) {
-                    if (/\s/.test(chrCurrent)) {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelectorSegment, objProcessor);
-                    } else if (chrCurrent === ",") {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelector, objProcessor);
-                    } else if (chrCurrent === "[") {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getAttributeSelectorProcessor(objProcessor));
-                    } else {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
-                    }
-                }
+            getSelectorProcessorResult = function (intCharacterCategorisation, objNextProcessor) {
+                return {
+                    CharacterCategorisation: intCharacterCategorisation,
+                    NextProcessor: objNextProcessor
+                };
             };
-            return objProcessor;
-        };
 
-        getAttributeSelectorProcessor = function (objProcessorToReturnTo) {
-            var objProcessor = {
-                Process: function (chrCurrent) {
-                    if ((chrCurrent === "\"") || (chrCurrent === "'")) {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getQuotedSelectorProcessor(objProcessor, chrCurrent, false));
-                    } else if (chrCurrent === "]") {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessorToReturnTo);
-                    } else {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
-                    }
-                }
-            };
-            return objProcessor;
-        };
-
-        getQuotedSelectorProcessor = function (objProcessorToReturnTo, chrQuoteCharacter, bNextCharacterIsEscaped) {
-            var objProcessor = {
-                Process: function (chrCurrent) {
-                    if (bNextCharacterIsEscaped) {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getQuotedSelectorProcessor(objProcessor, chrCurrent, false));
-                    } else if (chrCurrent === chrQuoteCharacter) {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessorToReturnTo);
-                    } else {
-                        return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
-                    }
-                }
-            };
-            return objProcessor;
-        };
-        
-        return {
-            Break: function (strSelector) {
-                var arrSelectors = [],
-                    arrSelectorBuffer = [],
-                    arrSelectorSegmentBuffer = [],
-                    objProcessor = getDefaultSelectorProcessor(),
-                    objSelectorProcessorResult;
-                
-                // Include an extra character on the end so that there's an extra pass through the loop where the EndOfSelector categorisation is specified (and the
-                // extra character ignored)
-                strSelector.split("").concat([" "]).forEach(function (chrCurrent, intIndex) {
-                    if (intIndex === strSelector.length) {
-                        objSelectorProcessorResult = getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelector, objProcessor);
-                    } else {
-                        objSelectorProcessorResult = objProcessor.Process(chrCurrent);
-                    }
-                    if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.SelectorSegment) {
-                        arrSelectorSegmentBuffer.push(chrCurrent);
-                    } else if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.EndOfSelectorSegment) {
-                        if (arrSelectorSegmentBuffer.length > 0) {
-                            arrSelectorBuffer.push(arrSelectorSegmentBuffer.join(""));
-                            arrSelectorSegmentBuffer = [];
+            getDefaultSelectorProcessor = function () {
+                var objProcessor = {
+                    Process: function (chrCurrent) {
+                        if (/\s/.test(chrCurrent)) {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelectorSegment, objProcessor);
+                        } else if (chrCurrent === ",") {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelector, objProcessor);
+                        } else if (chrCurrent === "[") {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getAttributeSelectorProcessor(objProcessor));
+                        } else {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
                         }
-                    } else if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.EndOfSelector) {
-                        if (arrSelectorSegmentBuffer.length > 0) {
-                            arrSelectorBuffer.push(arrSelectorSegmentBuffer.join(""));
-                            arrSelectorSegmentBuffer = [];
-                        }
-                        if (arrSelectorBuffer.length > 0) {
-                            arrSelectors.push(arrSelectorBuffer);
-                            arrSelectorBuffer = [];
-                        }
-                    } else {
-                        throw new Error("Unsupported CharacterCategorisationOptions: " + objSelectorProcessorResult.CharacterCategorisation);
                     }
-
-                    objProcessor = objSelectorProcessorResult.NextProcessor;
-                });
-                return arrSelectors;
-            }
-        };
-    }());
-    
-    objHierarchicalParser = (function () {
-        var getSegmentEnumerator,
-            getPropertyValueBuffer,
-            getSelectorSet,
-            trim,
-            getNumberOfLineReturnsFromContentIfAny,
-            parseIntoStructuredDataPartial;
-
-        getSegmentEnumerator = function (arrSegments) {
-            var intIndex = -1;
-            return {
-                GetCurrent: function () {
-                    return ((intIndex < 0) || (intIndex >= arrSegments.length)) ? null : arrSegments[intIndex];
-                },
-                MoveNext: function () {
-                    if (intIndex < arrSegments.length) {
-                        intIndex = intIndex + 1;
-                    }
-                    return (intIndex < arrSegments.length);
-                }
+                };
+                return objProcessor;
             };
-        };
-        
-        getPropertyValueBuffer = function () {
-            var objStylePropertyValue = null;
-            return {
-                Add: function (objLastStylePropertyName, strPropertyValueSegment, intSourceLineIndex) {
-                    if (objStylePropertyValue) {
-                        objStylePropertyValue.Values.push(strPropertyValueSegment);
-                    } else {
-                        objStylePropertyValue = {
-                            FragmentCategorisation: FragmentCategorisationOptions.StylePropertyValue,
-                            Property: objLastStylePropertyName,
-                            Values: [strPropertyValueSegment],
-                            SourceLineIndex: intSourceLineIndex
-                        };
+
+            getAttributeSelectorProcessor = function (objProcessorToReturnTo) {
+                var objProcessor = {
+                    Process: function (chrCurrent) {
+                        if ((chrCurrent === "\"") || (chrCurrent === "'")) {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getQuotedSelectorProcessor(objProcessor, chrCurrent, false));
+                        } else if (chrCurrent === "]") {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessorToReturnTo);
+                        } else {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
+                        }
                     }
-                },
-                GetHasContent: function () {
-                    return !!objStylePropertyValue;
-                },
-                ExtractCombinedContentAndClear: function () {
-                    if (!objStylePropertyValue) {
-                        throw new Error("No content to retrieve");
-                    }
-                    var objValueToReturn = objStylePropertyValue;
-                    objStylePropertyValue = null;
-                    return objValueToReturn;
-                }
+                };
+                return objProcessor;
             };
-        };
-        
-        getSelectorSet = function (strSelectors) {
-			// Using the SelectorBreaker means that any quoting, square brackets or other escaping is taken into account
-            var arrSelectors = objSelectorBreaker.Break(strSelectors),
-                arrTidiedSelectors = [];
-            arrSelectors.forEach(function (arrSelectorSegments) {
-                arrTidiedSelectors.push(arrSelectorSegments.join(" "));
-            });
-            return arrTidiedSelectors;
-        };
-        
-        trim = function (strValue) {
-            return strValue.trim ? strValue.trim() : strValue.replace(/^\s+|\s+$/g, "");
-        };
-        
-        getNumberOfLineReturnsFromContentIfAny = function (strValue) {
-            if ((strValue.indexOf("\r") === -1) && (strValue.indexOf("\n") === -1)) {
-                return 0;
-            }
-            return strValue.match(/\r\n|\r|\n/g).length;
-        };
-        
-        parseIntoStructuredDataPartial = function (objSegmentEnumerator, arrParentSelectorSets, intSourceLineIndex) {
-            var intStartingSourceLineIndex = intSourceLineIndex,
-                arrFragments = [],
-                arrSelectorOrStyleContentBuffer = [],
-                intSelectorOrStyleStartSourceLineIndex = -1,
-                objLastStylePropertyName = null,
-                objStylePropertyValueBuffer = getPropertyValueBuffer(),
-                objSegment,
-                arrSelectors,
-                objParsedNestedData,
-                strSelectorOrStyleContent;
-            
-            while (objSegmentEnumerator.MoveNext()) {
-                objSegment = objSegmentEnumerator.GetCurrent();
-                switch (objSegment.CharacterCategorisation) {
-                        
-                case CssParserJs.CharacterCategorisationOptions.Comment:
-                    arrFragments.push({
-                        FragmentCategorisation: FragmentCategorisationOptions.Comment,
-                        Value: objSegment.Value,
-                        SourceLineIndex: intSourceLineIndex
+
+            getQuotedSelectorProcessor = function (objProcessorToReturnTo, chrQuoteCharacter, bNextCharacterIsEscaped) {
+                var objProcessor = {
+                    Process: function (chrCurrent) {
+                        if (bNextCharacterIsEscaped) {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, getQuotedSelectorProcessor(objProcessor, chrCurrent, false));
+                        } else if (chrCurrent === chrQuoteCharacter) {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessorToReturnTo);
+                        } else {
+                            return getSelectorProcessorResult(CharacterCategorisationOptions.SelectorSegment, objProcessor);
+                        }
+                    }
+                };
+                return objProcessor;
+            };
+
+            return {
+                Break: function (strSelector) {
+                    var arrSelectors = [],
+                        arrSelectorBuffer = [],
+                        arrSelectorSegmentBuffer = [],
+                        objProcessor = getDefaultSelectorProcessor(),
+                        objSelectorProcessorResult;
+
+                    // Include an extra character on the end so that there's an extra pass through the loop where the EndOfSelector categorisation is specified (and the
+                    // extra character ignored)
+                    strSelector.split("").concat([" "]).forEach(function (chrCurrent, intIndex) {
+                        if (intIndex === strSelector.length) {
+                            objSelectorProcessorResult = getSelectorProcessorResult(CharacterCategorisationOptions.EndOfSelector, objProcessor);
+                        } else {
+                            objSelectorProcessorResult = objProcessor.Process(chrCurrent);
+                        }
+                        if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.SelectorSegment) {
+                            arrSelectorSegmentBuffer.push(chrCurrent);
+                        } else if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.EndOfSelectorSegment) {
+                            if (arrSelectorSegmentBuffer.length > 0) {
+                                arrSelectorBuffer.push(arrSelectorSegmentBuffer.join(""));
+                                arrSelectorSegmentBuffer = [];
+                            }
+                        } else if (objSelectorProcessorResult.CharacterCategorisation === CharacterCategorisationOptions.EndOfSelector) {
+                            if (arrSelectorSegmentBuffer.length > 0) {
+                                arrSelectorBuffer.push(arrSelectorSegmentBuffer.join(""));
+                                arrSelectorSegmentBuffer = [];
+                            }
+                            if (arrSelectorBuffer.length > 0) {
+                                arrSelectors.push(arrSelectorBuffer);
+                                arrSelectorBuffer = [];
+                            }
+                        } else {
+                            throw new Error("Unsupported CharacterCategorisationOptions: " + objSelectorProcessorResult.CharacterCategorisation);
+                        }
+
+                        objProcessor = objSelectorProcessorResult.NextProcessor;
                     });
-                    intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
-                    break;
-                        
-                case CssParserJs.CharacterCategorisationOptions.Whitespace:
-                    if (arrSelectorOrStyleContentBuffer.length > 0) {
-                        arrSelectorOrStyleContentBuffer.push(" ");
+                    return arrSelectors;
+                }
+            };
+        }());
+
+        objHierarchicalParser = (function () {
+            var getSegmentEnumerator,
+                getPropertyValueBuffer,
+                getSelectorSet,
+                trim,
+                getNumberOfLineReturnsFromContentIfAny,
+                parseIntoStructuredDataPartial;
+
+            getSegmentEnumerator = function (arrSegments) {
+                var intIndex = -1;
+                return {
+                    GetCurrent: function () {
+                        return ((intIndex < 0) || (intIndex >= arrSegments.length)) ? null : arrSegments[intIndex];
+                    },
+                    MoveNext: function () {
+                        if (intIndex < arrSegments.length) {
+                            intIndex = intIndex + 1;
+                        }
+                        return (intIndex < arrSegments.length);
                     }
-                    intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
-                    break;
-                        
-                case CssParserJs.CharacterCategorisationOptions.SelectorOrStyleProperty:
-                    if (arrSelectorOrStyleContentBuffer.length === 0) {
-                        intSelectorOrStyleStartSourceLineIndex = intSourceLineIndex;
+                };
+            };
+
+            getPropertyValueBuffer = function () {
+                var objStylePropertyValue = null;
+                return {
+                    Add: function (objLastStylePropertyName, strPropertyValueSegment, intSourceLineIndex) {
+                        if (objStylePropertyValue) {
+                            objStylePropertyValue.Values.push(strPropertyValueSegment);
+                        } else {
+                            objStylePropertyValue = {
+                                FragmentCategorisation: FragmentCategorisationOptions.StylePropertyValue,
+                                Property: objLastStylePropertyName,
+                                Values: [strPropertyValueSegment],
+                                SourceLineIndex: intSourceLineIndex
+                            };
+                        }
+                    },
+                    GetHasContent: function () {
+                        return !!objStylePropertyValue;
+                    },
+                    ExtractCombinedContentAndClear: function () {
+                        if (!objStylePropertyValue) {
+                            throw new Error("No content to retrieve");
+                        }
+                        var objValueToReturn = objStylePropertyValue;
+                        objStylePropertyValue = null;
+                        return objValueToReturn;
                     }
-                    arrSelectorOrStyleContentBuffer.push(objSegment.Value);
-                        
-                    // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
-                    // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
-                    if (objStylePropertyValueBuffer.GetHasContent()) {
-                        arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                };
+            };
+
+            getSelectorSet = function (strSelectors) {
+                // Using the SelectorBreaker means that any quoting, square brackets or other escaping is taken into account
+                var arrSelectors = objSelectorBreaker.Break(strSelectors),
+                    arrTidiedSelectors = [];
+                arrSelectors.forEach(function (arrSelectorSegments) {
+                    arrTidiedSelectors.push(arrSelectorSegments.join(" "));
+                });
+                return arrTidiedSelectors;
+            };
+
+            trim = function (strValue) {
+                return strValue.trim ? strValue.trim() : strValue.replace(/^\s+|\s+$/g, "");
+            };
+
+            getNumberOfLineReturnsFromContentIfAny = function (strValue) {
+                if ((strValue.indexOf("\r") === -1) && (strValue.indexOf("\n") === -1)) {
+                    return 0;
+                }
+                return strValue.match(/\r\n|\r|\n/g).length;
+            };
+
+            parseIntoStructuredDataPartial = function (objSegmentEnumerator, arrParentSelectorSets, intSourceLineIndex) {
+                var intStartingSourceLineIndex = intSourceLineIndex,
+                    arrFragments = [],
+                    arrSelectorOrStyleContentBuffer = [],
+                    intSelectorOrStyleStartSourceLineIndex = -1,
+                    objLastStylePropertyName = null,
+                    objStylePropertyValueBuffer = getPropertyValueBuffer(),
+                    objSegment,
+                    arrSelectors,
+                    objParsedNestedData,
+                    strSelectorOrStyleContent;
+
+                while (objSegmentEnumerator.MoveNext()) {
+                    objSegment = objSegmentEnumerator.GetCurrent();
+                    switch (objSegment.CharacterCategorisation) {
+
+                    case CssParserJs.CharacterCategorisationOptions.Comment:
+                        arrFragments.push({
+                            FragmentCategorisation: FragmentCategorisationOptions.Comment,
+                            Value: objSegment.Value,
+                            SourceLineIndex: intSourceLineIndex
+                        });
+                        intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
+                        break;
+
+                    case CssParserJs.CharacterCategorisationOptions.Whitespace:
+                        if (arrSelectorOrStyleContentBuffer.length > 0) {
+                            arrSelectorOrStyleContentBuffer.push(" ");
+                        }
+                        intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
+                        break;
+
+                    case CssParserJs.CharacterCategorisationOptions.SelectorOrStyleProperty:
+                        if (arrSelectorOrStyleContentBuffer.length === 0) {
+                            intSelectorOrStyleStartSourceLineIndex = intSourceLineIndex;
+                        }
+                        arrSelectorOrStyleContentBuffer.push(objSegment.Value);
+
+                        // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
+                        // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
+                        if (objStylePropertyValueBuffer.GetHasContent()) {
+                            arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                        }
+                        break;
+
+                    case CssParserJs.CharacterCategorisationOptions.OpenBrace:
+                        if (arrSelectorOrStyleContentBuffer.length === 0) {
+                            throw new Error("Encountered OpenBrace with no preceding selector at line " + (intSourceLineIndex + 1));
+                        }
+
+                        // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
+                        // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
+                        if (objStylePropertyValueBuffer.GetHasContent()) {
+                            arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                        }
+
+                        arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
+                        if (arrSelectors.length === 0) {
+                            throw new Error("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1));
+                        }
+                        objParsedNestedData = parseIntoStructuredDataPartial(
+                            objSegmentEnumerator,
+                            arrParentSelectorSets.concat([arrSelectors]),
+                            intSourceLineIndex
+                        );
+                        arrFragments.push({
+                            FragmentCategorisation: (arrSelectors[0].toLowerCase().substring(0, 6) === "@media")
+                                ? FragmentCategorisationOptions.MediaQuery
+                                : FragmentCategorisationOptions.Selector,
+                            ParentSelectors: arrParentSelectorSets,
+                            Selectors: arrSelectors,
+                            ChildFragments: objParsedNestedData.Fragments,
+                            SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
+                        });
+                        intSourceLineIndex += objParsedNestedData.NumberOfLinesParsed;
+                        arrSelectorOrStyleContentBuffer = [];
+                        break;
+
+                    case CssParserJs.CharacterCategorisationOptions.CloseBrace:
+                        // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
+                        // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
+                        if (objStylePropertyValueBuffer.GetHasContent()) {
+                            arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                        }
+
+                        if (arrSelectorOrStyleContentBuffer.length > 0) {
+                            arrFragments.push({
+                                FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
+                                Value: arrSelectorOrStyleContentBuffer.join(""),
+                                SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
+                            });
+                        }
+                        return {
+                            Fragments: arrFragments,
+                            NumberOfLinesParsed: intSourceLineIndex - intStartingSourceLineIndex
+                        };
+
+                    case CssParserJs.CharacterCategorisationOptions.StylePropertyColon:
+                    case CssParserJs.CharacterCategorisationOptions.SemiColon:
+                        // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
+                        // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
+                        if (objStylePropertyValueBuffer.GetHasContent()) {
+                            arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                        }
+
+                        if (arrSelectorOrStyleContentBuffer.length > 0) {
+                            strSelectorOrStyleContent = arrSelectorOrStyleContentBuffer.join("");
+                            if (strSelectorOrStyleContent.toLowerCase().substring(0, 7) === "@import") {
+                                arrFragments.push({
+                                    FragmentCategorisation: FragmentCategorisationOptions.Import,
+                                    Value: trim(strSelectorOrStyleContent.substring(7)),
+                                    SourceLineIndex: intSourceLineIndex
+                                });
+                                arrSelectorOrStyleContentBuffer = [];
+                                break;
+                            }
+
+                            // Note: The SemiColon case here probably suggests invalid content, it should only follow a Value segment (ignoring  Comments and WhiteSpace),
+                            // so if there is anything in the selectorOrStyleContentBuffer before the SemiColon then it's probably not correct (but we're not validating
+                            // for that here, we just don't want to throw anything away!)
+                            objLastStylePropertyName = {
+                                FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
+                                Value: arrSelectorOrStyleContentBuffer.join(""),
+                                SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
+                            };
+                            arrFragments.push(objLastStylePropertyName);
+                            arrSelectorOrStyleContentBuffer = [];
+                        }
+                        break;
+
+                    case CssParserJs.CharacterCategorisationOptions.Value:
+                        if (arrSelectorOrStyleContentBuffer.length > 0) {
+                            strSelectorOrStyleContent = arrSelectorOrStyleContentBuffer.join("");
+                            if (strSelectorOrStyleContent.toLowerCase().substring(0, 7) === "@import") {
+                                arrSelectorOrStyleContentBuffer.push(objSegment.Value);
+                                break;
+                            }
+
+                            // This is presumably an error condition, there should be a colon between SelectorOrStyleProperty content and Value content, but we're not
+                            // validating here so just lump it all together
+                            objLastStylePropertyName = {
+                                FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
+                                Value: arrSelectorOrStyleContentBuffer.join(""),
+                                SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
+                            };
+                            arrFragments.push(objLastStylePropertyName);
+                            arrSelectorOrStyleContentBuffer = [];
+                        }
+                        if (!objLastStylePropertyName) {
+                            throw new Error("Invalid content, orphan style property value encountered at line " + (intSourceLineIndex + 1));
+                        }
+                        objStylePropertyValueBuffer.Add(objLastStylePropertyName, objSegment.Value, intSelectorOrStyleStartSourceLineIndex);
+                        break;
+
+                    default:
+                        throw new Error("Unsupported CharacterCategorisationOptions value: " + objSegment.CharacterCategorisation);
                     }
-                    break;
-                        
-                case CssParserJs.CharacterCategorisationOptions.OpenBrace:
-                    if (arrSelectorOrStyleContentBuffer.length === 0) {
-                        throw new Error("Encountered OpenBrace with no preceding selector at line " + (intSourceLineIndex + 1));
-                    }
-                    
-                    // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
-                    // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
-                    if (objStylePropertyValueBuffer.GetHasContent()) {
-                        arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
-                    }
-                        
+                }
+
+                // If we have any content in the selectorOrStyleContentBuffer and we're hitting a CloseBrace then it's probably invalid content but just stash it away
+                // and move on! (The purpose of this work isn't to get too nuts about invalid CSS).
+                if (arrSelectorOrStyleContentBuffer.length > 0) {
                     arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
                     if (arrSelectors.length === 0) {
                         throw new Error("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1));
                     }
-                    objParsedNestedData = parseIntoStructuredDataPartial(
-                        objSegmentEnumerator,
-                        arrParentSelectorSets.concat([arrSelectors]),
-                        intSourceLineIndex
-                    );
                     arrFragments.push({
-                        FragmentCategorisation: (arrSelectors[0].toLowerCase().substring(0, 6) === "@media")
+                        FragmentCategorisation: (arrSelectors[0].Value.toLowerCase().substring(0, 6) === "@media")
                             ? FragmentCategorisationOptions.MediaQuery
                             : FragmentCategorisationOptions.Selector,
                         ParentSelectors: arrParentSelectorSets,
                         Selectors: arrSelectors,
-                        ChildFragments: objParsedNestedData.Fragments,
-                        SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
+                        ChildFragments: [],
+                        SourceLineIndex: intSourceLineIndex
                     });
-                    intSourceLineIndex += objParsedNestedData.NumberOfLinesParsed;
-                    arrSelectorOrStyleContentBuffer = [];
-                    break;
-                        
-                case CssParserJs.CharacterCategorisationOptions.CloseBrace:
-                    // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
-                    // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
-                    if (objStylePropertyValueBuffer.GetHasContent()) {
-                        arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
-                    }
-                        
-                    if (arrSelectorOrStyleContentBuffer.length > 0) {
-                        arrFragments.push({
-                            FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
-                            Value: arrSelectorOrStyleContentBuffer.join(""),
-                            SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
-                        });
-                    }
-                    return {
-                        Fragments: arrFragments,
-                        NumberOfLinesParsed: intSourceLineIndex - intStartingSourceLineIndex
-                    };
-                
-                case CssParserJs.CharacterCategorisationOptions.StylePropertyColon:
-                case CssParserJs.CharacterCategorisationOptions.SemiColon:
-                    // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
-                    // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
-                    if (objStylePropertyValueBuffer.GetHasContent()) {
-                        arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
-                    }
-                        
-                    if (arrSelectorOrStyleContentBuffer.length > 0) {
-                        strSelectorOrStyleContent = arrSelectorOrStyleContentBuffer.join("");
-                        if (strSelectorOrStyleContent.toLowerCase().substring(0, 7) === "@import") {
-                            arrFragments.push({
-                                FragmentCategorisation: FragmentCategorisationOptions.Import,
-                                Value: trim(strSelectorOrStyleContent.substring(7)),
-                                SourceLineIndex: intSourceLineIndex
-                            });
-                            arrSelectorOrStyleContentBuffer = [];
-                            break;
-                        }
-
-                        // Note: The SemiColon case here probably suggests invalid content, it should only follow a Value segment (ignoring  Comments and WhiteSpace),
-                        // so if there is anything in the selectorOrStyleContentBuffer before the SemiColon then it's probably not correct (but we're not validating
-                        // for that here, we just don't want to throw anything away!)
-                        objLastStylePropertyName = {
-                            FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
-                            Value: arrSelectorOrStyleContentBuffer.join(""),
-                            SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
-                        };
-                        arrFragments.push(objLastStylePropertyName);
-                        arrSelectorOrStyleContentBuffer = [];
-                    }
-                    break;
-                        
-                case CssParserJs.CharacterCategorisationOptions.Value:
-                    if (arrSelectorOrStyleContentBuffer.length > 0) {
-                        strSelectorOrStyleContent = arrSelectorOrStyleContentBuffer.join("");
-                        if (strSelectorOrStyleContent.toLowerCase().substring(0, 7) === "@import") {
-                            arrSelectorOrStyleContentBuffer.push(objSegment.Value);
-                            break;
-                        }
-                        
-                        // This is presumably an error condition, there should be a colon between SelectorOrStyleProperty content and Value content, but we're not
-                        // validating here so just lump it all together
-                        objLastStylePropertyName = {
-                            FragmentCategorisation: FragmentCategorisationOptions.StylePropertyName,
-                            Value: arrSelectorOrStyleContentBuffer.join(""),
-                            SourceLineIndex: intSelectorOrStyleStartSourceLineIndex
-                        };
-                        arrFragments.push(objLastStylePropertyName);
-                        arrSelectorOrStyleContentBuffer = [];
-                    }
-                    if (!objLastStylePropertyName) {
-                        throw new Error("Invalid content, orphan style property value encountered at line " + (intSourceLineIndex + 1));
-                    }
-                    objStylePropertyValueBuffer.Add(objLastStylePropertyName, objSegment.Value, intSelectorOrStyleStartSourceLineIndex);
-                    break;
-
-                default:
-                    throw new Error("Unsupported CharacterCategorisationOptions value: " + objSegment.CharacterCategorisation);
                 }
-            }
-            
-			// If we have any content in the selectorOrStyleContentBuffer and we're hitting a CloseBrace then it's probably invalid content but just stash it away
-            // and move on! (The purpose of this work isn't to get too nuts about invalid CSS).
-            if (arrSelectorOrStyleContentBuffer.length > 0) {
-                arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
-                if (arrSelectors.length === 0) {
-                    throw new Error("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1));
+
+                // It's very feasible that there will still be some style property value content in the buffer at this point, so ensure it doesn't get lost
+                if (objStylePropertyValueBuffer.GetHasContent()) {
+                    arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
                 }
-                arrFragments.push({
-                    FragmentCategorisation: (arrSelectors[0].Value.toLowerCase().substring(0, 6) === "@media")
-                        ? FragmentCategorisationOptions.MediaQuery
-                        : FragmentCategorisationOptions.Selector,
-                    ParentSelectors: arrParentSelectorSets,
-                    Selectors: arrSelectors,
-                    ChildFragments: [],
-                    SourceLineIndex: intSourceLineIndex
-                });
-            }
-            
-			// It's very feasible that there will still be some style property value content in the buffer at this point, so ensure it doesn't get lost
-            if (objStylePropertyValueBuffer.GetHasContent()) {
-                arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
-            }
-            
-            return {
-                Fragments: arrFragments,
-                NumberOfLinesParsed: intSourceLineIndex - intStartingSourceLineIndex
+
+                return {
+                    Fragments: arrFragments,
+                    NumberOfLinesParsed: intSourceLineIndex - intStartingSourceLineIndex
+                };
             };
-        };
-        
-        return {
-            ParseIntoStructuredData: function (arrSegments) {
-                var objSegmentEnumerator = getSegmentEnumerator(arrSegments),
-                    objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, [], 0),
-                    objSegment,
-                    intLastFragmentLineIndex;
-                while (objSegmentEnumerator.MoveNext()) {
-                    objSegment = objSegmentEnumerator.GetCurrent();
-                    if ((objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Comment)
-                            && (objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Whitespace)) {
-                        if (objParsedData.Fragments.length > 0) {
-                            intLastFragmentLineIndex = objParsedData.Fragments[objParsedData.Fragments.length - 1].SouceLineIndex;
-                        } else {
-                            intLastFragmentLineIndex = 0;
+
+            return {
+                ParseIntoStructuredData: function (arrSegments) {
+                    var objSegmentEnumerator = getSegmentEnumerator(arrSegments),
+                        objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, [], 0),
+                        objSegment,
+                        intLastFragmentLineIndex;
+                    while (objSegmentEnumerator.MoveNext()) {
+                        objSegment = objSegmentEnumerator.GetCurrent();
+                        if ((objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Comment)
+                                && (objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Whitespace)) {
+                            if (objParsedData.Fragments.length > 0) {
+                                intLastFragmentLineIndex = objParsedData.Fragments[objParsedData.Fragments.length - 1].SouceLineIndex;
+                            } else {
+                                intLastFragmentLineIndex = 0;
+                            }
+                            throw new Error("Encountered unparsable data, this indicates content (after line " + (intLastFragmentLineIndex + 1) + ")");
                         }
-                        throw new Error("Encountered unparsable data, this indicates content (after line " + (intLastFragmentLineIndex + 1) + ")");
+                    }
+                    return objParsedData.Fragments;
+                }
+            };
+        }());
+
+        FragmentCategorisationOptions = {
+            Comment: 0,
+            Import: 1,
+            MediaQuery: 2,
+            Selector: 3,
+            StylePropertyName: 4,
+            StylePropertyValue: 5,
+            GetNameFor: function (intValue) {
+                var strPropertyName;
+                for (strPropertyName in FragmentCategorisationOptions) {
+                    if (FragmentCategorisationOptions.hasOwnProperty(strPropertyName)) {
+                        if (FragmentCategorisationOptions[strPropertyName] === intValue) {
+                            return strPropertyName;
+                        }
                     }
                 }
-                return objParsedData.Fragments;
+                throw new Error("Invalid FragmentCategorisationOptions: " + intValue);
             }
+        };
+
+        CssParserJs.ExtendedLessParser = {
+            ParseIntoStructuredData: function (data) {
+                if (typeof (data) === "string") {
+                    data = CssParserJs.ParseLess(data);
+                }
+                return objHierarchicalParser.ParseIntoStructuredData(data);
+            },
+            FragmentCategorisationOptions: FragmentCategorisationOptions
         };
     }());
-
-    FragmentCategorisationOptions = {
-        Comment: 0,
-        Import: 1,
-        MediaQuery: 2,
-        Selector: 3,
-        StylePropertyName: 4,
-        StylePropertyValue: 5,
-        GetNameFor: function (intValue) {
-            var strPropertyName;
-            for (strPropertyName in FragmentCategorisationOptions) {
-                if (FragmentCategorisationOptions.hasOwnProperty(strPropertyName)) {
-                    if (FragmentCategorisationOptions[strPropertyName] === intValue) {
-                        return strPropertyName;
-                    }
-                }
-            }
-            throw new Error("Invalid FragmentCategorisationOptions: " + intValue);
-        }
-    };
     
-    CssParserJs.ExtendedLessParser = {
-        ParseIntoStructuredData: function (data) {
-            if (typeof (data) === "string") {
-                data = CssParserJs.ParseLess(data);
-            }
-            return objHierarchicalParser.ParseIntoStructuredData(data);
-        },
-        FragmentCategorisationOptions: FragmentCategorisationOptions
-    };
-            
-}.call(this));
+    return CssParserJs;
+});
