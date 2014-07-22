@@ -919,7 +919,12 @@
     };
     
     CssParserJs.ExtendedLessParser = {
-        ParseIntoStructuredData: objHierarchicalParser.ParseIntoStructuredData,
+        ParseIntoStructuredData: function (data) {
+            if (typeof (data) === "string") {
+                data = CssParserJs.ParseLess(data);
+            }
+            return objHierarchicalParser.ParseIntoStructuredData(data);
+        },
         FragmentCategorisationOptions: FragmentCategorisationOptions
     };
             
