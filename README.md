@@ -13,25 +13,25 @@ It takes (valid) LESS styles - eg.
 and returns an array of nodes representing the data -
 
     [{
-      "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+      "FragmentCategorisation": 3,
       "Selectors": [ "div.w1", "div.w2" ],
       "ParentSelectors": [],
       "ChildFragments": [{
-          "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+          "FragmentCategorisation": 3,
           "Selectors": [ "p" ],
           "ParentSelectors": [ [ "div.w1", "div.w2" ] ],
           "ChildFragments": [{
-              "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+              "FragmentCategorisation": 3,
               "Selectors": [ "strong", "em" ],
               "ParentSelectors": [ [ "div.w1", "div.w2" ], [ "p" ] ],
               "ChildFragments": [{
-                  "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                  "FragmentCategorisation": 4,
                   "Value": "font-weight",
                   "SourceLineIndex": 2
               }, {
-                  "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                  "FragmentCategorisation": 5,
                   "Property": {
-                      "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                      "FragmentCategorisation": 4,
                       "Value": "font-weight",
                       "SourceLineIndex": 2
                   },
@@ -44,6 +44,15 @@ and returns an array of nodes representing the data -
       }],
       "SourceLineIndex": 0
     }];
+
+The "FragmentCategorisation" values are described in an enum-esque reference CssParser.ExtendedLessParser.FragmentCategorisationOptions which has the properties
+
+    Comment: 0
+    Import: 1,
+    MediaQuery: 2,
+    Selector: 3,
+    StylePropertyName: 4,
+    StylePropertyValue: 5
 
 The call syntax is
 
