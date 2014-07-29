@@ -4,7 +4,7 @@
 
     "use strict";
     
-    var CharacterCategorisationOptions, objCharacterProcessors, getCharacterPositionStringNavigator, processCharacters, groupCharacters, CssParserJs;
+    var CharacterCategorisationOptions, ParseError, objCharacterProcessors, getCharacterPositionStringNavigator, processCharacters, groupCharacters, CssParserJs;
     
     CharacterCategorisationOptions = {
         Comment: 0,
@@ -27,6 +27,13 @@
             throw new Error("Invalid CharacterCategorisationOptions: " + intValue);
         }
     };
+
+    ParseError = function (message, indexInSource) {
+        this.message = message;
+        this.indexInSource = indexInSource;
+    };
+    ParseError.prototype = new Error();
+    ParseError.prototype.constructor = ParseError;
     
     objCharacterProcessors = (function () {
         var getCharacterProcessorResult,
@@ -485,6 +492,7 @@
     
     CssParserJs = {
         CharacterCategorisationOptions: CharacterCategorisationOptions,
+        ParseError: ParseError,
         ParseCss: function (strValue) {
             return groupCharacters(processCharacters(objCharacterProcessors.GetNewCssProcessor(), strValue));
         },
@@ -600,7 +608,7 @@
                                 arrSelectorBuffer = [];
                             }
                         } else {
-                            throw new Error("Unsupported CharacterCategorisationOptions: " + objSelectorProcessorResult.CharacterCategorisation);
+                            throw new ParseError("Unsupported CharacterCategorisationOptions: " + objSelectorProcessorResult.CharacterCategorisation, intIndex);
                         }
 
                         objProcessor = objSelectorProcessorResult.NextProcessor;
@@ -730,7 +738,7 @@
 
                     case CssParserJs.CharacterCategorisationOptions.OpenBrace:
                         if (arrSelectorOrStyleContentBuffer.length === 0) {
-                            throw new Error("Encountered OpenBrace with no preceding selector at line " + (intSourceLineIndex + 1));
+                            throw new ParseError("Encountered OpenBrace with no preceding selector at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
                         }
 
                         // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
@@ -741,7 +749,7 @@
 
                         arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
                         if (arrSelectors.length === 0) {
-                            throw new Error("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1));
+                            throw new ParseError("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
                         }
                         objParsedNestedData = parseIntoStructuredDataPartial(
                             objSegmentEnumerator,
@@ -832,13 +840,13 @@
                             arrSelectorOrStyleContentBuffer = [];
                         }
                         if (!objLastStylePropertyName) {
-                            throw new Error("Invalid content, orphan style property value encountered at line " + (intSourceLineIndex + 1));
+                            throw new ParseError("Invalid content, orphan style property value encountered at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
                         }
                         objStylePropertyValueBuffer.Add(objLastStylePropertyName, objSegment.Value, intSelectorOrStyleStartSourceLineIndex);
                         break;
 
                     default:
-                        throw new Error("Unsupported CharacterCategorisationOptions value: " + objSegment.CharacterCategorisation);
+                        throw new ParseError("Unsupported CharacterCategorisationOptions value: " + objSegment.CharacterCategorisation, objSegment.IndexInSource);
                     }
                 }
 
@@ -846,9 +854,6 @@
                 // and move on! (The purpose of this work isn't to get too nuts about invalid CSS).
                 if (arrSelectorOrStyleContentBuffer.length > 0) {
                     arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
-                    if (arrSelectors.length === 0) {
-                        throw new Error("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1));
-                    }
                     arrFragments.push({
                         FragmentCategorisation: (arrSelectors[0].Value.toLowerCase().substring(0, 6) === "@media")
                             ? FragmentCategorisationOptions.MediaQuery
@@ -886,7 +891,10 @@
                             } else {
                                 intLastFragmentLineIndex = 0;
                             }
-                            throw new Error("Encountered unexpected content (after line " + (intLastFragmentLineIndex + 1) + ") - this is often caused by mismatched opening or closing braces");
+                            throw new ParseError(
+                                "Encountered unexpected content (after line " + (intLastFragmentLineIndex + 1) + ") - this is often caused by mismatched opening or closing braces",
+                                objSegment.IndexInSource
+                            );
                         }
                     }
                     return objParsedData.Fragments;
