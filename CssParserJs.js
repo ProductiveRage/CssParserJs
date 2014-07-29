@@ -882,11 +882,11 @@
                         if ((objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Comment)
                                 && (objSegment.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Whitespace)) {
                             if (objParsedData.Fragments.length > 0) {
-                                intLastFragmentLineIndex = objParsedData.Fragments[objParsedData.Fragments.length - 1].SouceLineIndex;
+                                intLastFragmentLineIndex = objParsedData.Fragments[objParsedData.Fragments.length - 1].SourceLineIndex;
                             } else {
                                 intLastFragmentLineIndex = 0;
                             }
-                            throw new Error("Encountered unparsable data, this indicates content (after line " + (intLastFragmentLineIndex + 1) + ")");
+                            throw new Error("Encountered unexpected content (after line " + (intLastFragmentLineIndex + 1) + ") - this is often caused by mismatched opening or closing braces");
                         }
                     }
                     return objParsedData.Fragments;
