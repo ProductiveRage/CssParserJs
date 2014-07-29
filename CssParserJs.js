@@ -34,6 +34,7 @@
     };
     ParseError.prototype = new Error();
     ParseError.prototype.constructor = ParseError;
+    ParseError.prototype.name = "ParseError";
     
     objCharacterProcessors = (function () {
         var getCharacterProcessorResult,
@@ -691,7 +692,7 @@
                 return strValue.match(/\r\n|\r|\n/g).length;
             };
 
-            parseIntoStructuredDataPartial = function (objSegmentEnumerator, arrParentSelectorSets, intSourceLineIndex) {
+            parseIntoStructuredDataPartial = function (objSegmentEnumerator, arrParentSelectorSets, intDepth, intSourceLineIndex) {
                 var intStartingSourceLineIndex = intSourceLineIndex,
                     arrFragments = [],
                     arrSelectorOrStyleContentBuffer = [],
@@ -754,6 +755,7 @@
                         objParsedNestedData = parseIntoStructuredDataPartial(
                             objSegmentEnumerator,
                             arrParentSelectorSets.concat([arrSelectors]),
+                            intDepth + 1,
                             intSourceLineIndex
                         );
                         arrFragments.push({
@@ -770,6 +772,13 @@
                         break;
 
                     case CssParserJs.CharacterCategorisationOptions.CloseBrace:
+                        if (intDepth === 0) {
+                            throw new ParseError(
+                                "Encountered unexpected close brace (on line " + (intSourceLineIndex + 1) + ")",
+                                objSegment.IndexInSource
+                            );
+                        }
+                            
                         // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
                         // CSS it should be only a semicolon or close brace that terminates a value but we're not concerned about invalid CSS here)
                         if (objStylePropertyValueBuffer.GetHasContent()) {
@@ -879,7 +888,7 @@
             return {
                 ParseIntoStructuredData: function (arrSegments) {
                     var objSegmentEnumerator = getSegmentEnumerator(arrSegments),
-                        objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, [], 0),
+                        objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, [], 0, 0),
                         objSegment,
                         intLastFragmentLineIndex;
                     while (objSegmentEnumerator.MoveNext()) {
