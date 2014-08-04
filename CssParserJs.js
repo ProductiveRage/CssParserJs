@@ -692,7 +692,7 @@
                 return strValue.match(/\r\n|\r|\n/g).length;
             };
 
-            parseIntoStructuredDataPartial = function (objSegmentEnumerator, arrParentSelectorSets, intDepth, intSourceLineIndex) {
+            parseIntoStructuredDataPartial = function (objSegmentEnumerator, bExcludeComments, arrParentSelectorSets, intDepth, intSourceLineIndex) {
                 var intStartingSourceLineIndex = intSourceLineIndex,
                     arrFragments = [],
                     arrSelectorOrStyleContentBuffer = [],
@@ -709,11 +709,13 @@
                     switch (objSegment.CharacterCategorisation) {
 
                     case CssParserJs.CharacterCategorisationOptions.Comment:
-                        arrFragments.push({
-                            FragmentCategorisation: FragmentCategorisationOptions.Comment,
-                            Value: objSegment.Value,
-                            SourceLineIndex: intSourceLineIndex
-                        });
+                        if (!bExcludeComments) {
+                            arrFragments.push({
+                                FragmentCategorisation: FragmentCategorisationOptions.Comment,
+                                Value: objSegment.Value,
+                                SourceLineIndex: intSourceLineIndex
+                            });
+                        }
                         intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
                         break;
 
@@ -754,6 +756,7 @@
                         }
                         objParsedNestedData = parseIntoStructuredDataPartial(
                             objSegmentEnumerator,
+                            bExcludeComments,
                             arrParentSelectorSets.concat([arrSelectors]),
                             intDepth + 1,
                             intSourceLineIndex
@@ -886,9 +889,10 @@
             };
 
             return {
-                ParseIntoStructuredData: function (arrSegments) {
+                ParseIntoStructuredData: function (arrSegments, bExcludeComments) {
                     var objSegmentEnumerator = getSegmentEnumerator(arrSegments),
-                        objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, [], 0, 0),
+                        bExcludeComments,
+                        objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, bExcludeComments, [], 0, 0),
                         objSegment,
                         intLastFragmentLineIndex;
                     while (objSegmentEnumerator.MoveNext()) {
@@ -932,11 +936,11 @@
         };
 
         CssParserJs.ExtendedLessParser = {
-            ParseIntoStructuredData: function (data) {
+            ParseIntoStructuredData: function (data, bOptionallyExcludeComments) {
                 if (typeof (data) === "string") {
                     data = CssParserJs.ParseLess(data);
                 }
-                return objHierarchicalParser.ParseIntoStructuredData(data);
+                return objHierarchicalParser.ParseIntoStructuredData(data, (bOptionallyExcludeComments === true) ? true : false);
             },
             FragmentCategorisationOptions: FragmentCategorisationOptions
         };
