@@ -19,6 +19,8 @@
 */
 (function () {
     "use strict";
+    
+    module('CssParserJs.ParseLess');
 
 	test('PseudoClassesShouldNotBeIdentifiedAsPropertyValues', function () {
         var content = "a:hover { color: blue; }",
@@ -171,7 +173,9 @@
 		deepEqual(CssParserJs.ParseLess(content), expected);
 	});
     
-    test('MediaQueryWrappedHierachicalParser', function () {
+    module('CssParserJs.ExtendedLessParser.ParseIntoStructuredData');
+
+    test('MultiSelectorNestedStyle', function () {
         var content = "div.w1, div.w2 {\n  p {\n    strong, em { font-weight: bold; }\n  }\n}",
             expected = [{
                 "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
@@ -239,4 +243,114 @@
 		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
     });
 
+    test('CommentedOutFirstStylePropertyValueSegmentIsConsideredPartOfThePropertyValue', function () {
+        var content = "body {\n  color: /*blue*/ red;\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                "Selectors": [ "body" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                    "Value": "color",
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                    "Property": {
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                        "Value": "color",
+                        "SourceLineIndex": 1
+                    },
+                    "Values": [ "/*blue*/", "red" ],
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
+
+    test('CommentedOutMiddleStylePropertyValueSegmentIsConsideredPartOfThePropertyValue', function () {
+        var content = "body {\n  background: white /* black */ url(\"awesomecats.png\") no-repeat;\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                "Selectors": [ "body" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                    "Value": "background",
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                    "Property": {
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                        "Value": "background",
+                        "SourceLineIndex": 1
+                    },
+                    "Values": [ "white", "/* black */", "url(\"awesomecats.png\")", "no-repeat" ],
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
+
+    test('CommentedOutLastStylePropertyValueSegmentIsNotConsideredPartOfThePropertyValue', function () {
+        var content = "body {\n  color: red /*blue*/;\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                "Selectors": [ "body" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                    "Value": "color",
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                    "Property": {
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                        "Value": "color",
+                        "SourceLineIndex": 1
+                    },
+                    "Values": [ "red" ],
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Comment,
+                    "Value": "/*blue*/",
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
+    
+    // This is extremely similar to "CommentedOutLastStylePropertyValueSegmentIsNotConsideredPartOfThePropertyValue" except that the comment appears
+    // after the semi-colon here and before it in the other test
+    test('CommentedAfterStylePropertyValueTerminatesIsNotConsideredPartOfThePropertyValue', function () {
+        var content = "body {\n  color: red;/*blue*/\n}",
+            expected = [{
+                "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Selector,
+                "Selectors": [ "body" ],
+                "ParentSelectors": [],
+                "ChildFragments": [{
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                    "Value": "color",
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue,
+                    "Property": {
+                        "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName,
+                        "Value": "color",
+                        "SourceLineIndex": 1
+                    },
+                    "Values": [ "red" ],
+                    "SourceLineIndex": 1
+                }, {
+                    "FragmentCategorisation": CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.Comment,
+                    "Value": "/*blue*/",
+                    "SourceLineIndex": 1
+                }],
+                "SourceLineIndex": 0
+            }];
+		deepEqual(CssParserJs.ExtendedLessParser.ParseIntoStructuredData(content), expected);
+    });
+    
 }());
