@@ -772,6 +772,9 @@
                                 // (if, for example, this parsing step is used to minify content) then the argument may be set that excludes comments.
                                 objStylePropertyValueBuffer.Add(objLastStylePropertyName, forceIntoMultiLineComment(objSegment.Value), intSelectorOrStyleStartSourceLineIndex);
                             } else {
+                                if (objStylePropertyValueBuffer.GetHasContent()) {
+                                    arrFragments.push(objStylePropertyValueBuffer.ExtractCombinedContentAndClear());
+                                }
                                 arrFragments.push({
                                     FragmentCategorisation: FragmentCategorisationOptions.Comment,
                                     Value: objSegment.Value,
