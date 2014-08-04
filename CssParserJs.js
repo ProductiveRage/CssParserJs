@@ -625,6 +625,8 @@
                 getSelectorSet,
                 trim,
                 getNumberOfLineReturnsFromContentIfAny,
+                isCommentWithinStylePropertyValue,
+                forceIntoMultiLineComment,
                 parseIntoStructuredDataPartial;
 
             getSegmentEnumerator = function (arrSegments) {
@@ -638,6 +640,18 @@
                             intIndex = intIndex + 1;
                         }
                         return (intIndex < arrSegments.length);
+                    },
+                    TryToPeekAhead: function (positiveOffsetToPeekFor) {
+                        var peekIndex = intIndex + positiveOffsetToPeekFor;
+                        if (peekIndex >= arrSegments.length) {
+                            return {
+                                Success: false
+                            };
+                        }
+                        return {
+                            Success: true,
+                            Value: arrSegments[peekIndex]
+                        };
                     }
                 };
             };
@@ -691,6 +705,47 @@
                 }
                 return strValue.match(/\r\n|\r|\n/g).length;
             };
+            
+            isCommentWithinStylePropertyValue = function (previousFragmentIfAny, segmentEnumerator) {
+                // Does the current segment appear to be a comment within a style property value (eg. the "/*red*/" from "color: /*red*/ blue;")?
+                // It doesn't count if it comes after the value (eg. "color: blue; // red"), only if it's part of the style property value (since,
+                // with the object model we have, that groups all style property value segments into a single fragment, along with a reference to
+                // the style property name, and so the comment will have to be considered one of the property value segments).
+                if (!previousFragmentIfAny) {
+                    return false;
+                }
+                if ((previousFragmentIfAny.FragmentCategorisation !== CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyName)
+                        && (previousFragmentIfAny.FragmentCategorisation !== CssParserJs.ExtendedLessParser.FragmentCategorisationOptions.StylePropertyValue)) {
+                    return false;
+                }
+                var peekOffset = 1;
+                while (true) {
+                    var peekResult = segmentEnumerator.TryToPeekAhead(peekOffset);
+                    if (!peekResult.Success) {
+                        return false;
+                    }
+                    if (peekResult.Value.CharacterCategorisation === CssParserJs.CharacterCategorisationOptions.Value) {
+                        return true;
+                    }
+                    if ((peekResult.Value.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Comment)
+                            && (peekResult.Value.CharacterCategorisation !== CssParserJs.CharacterCategorisationOptions.Whitespace)) {
+                        return false;
+                    }
+                    peekOffset += 1;
+                }
+            };
+            
+            forceIntoMultiLineComment = function (commentValue) {
+                // When a comment is considered to be part of a style property value (eg. "color: /*blue*/ red;"), it must be forced into a multi-line comment format
+                // so that the layout of the style property value (in terms of the whitespace between value segments) does not have any semantic meaning. If it was a
+                // single-line comment (eg. "color: //blue\n red;") then it would be impossible to render that property value on one line since the "red" segment would
+                // get absorbed by the "//blue" comment. For cases where these comments are not of interest to the output (if content is being minified in any way),
+                // then the optional argument to the ParseIntoStructuredData method, that excludes comments from the output, may be used.
+                if (commentValue.substr(0, 2) === "//") {
+                    return "/* " + trim(commentValue.substr(2).replace(/\*\//g, "* /")) + " */";
+                }
+                return commentValue;
+            };
 
             parseIntoStructuredDataPartial = function (objSegmentEnumerator, bExcludeComments, arrParentSelectorSets, intDepth, intSourceLineIndex) {
                 var intStartingSourceLineIndex = intSourceLineIndex,
@@ -710,11 +765,19 @@
 
                     case CssParserJs.CharacterCategorisationOptions.Comment:
                         if (!bExcludeComments) {
-                            arrFragments.push({
-                                FragmentCategorisation: FragmentCategorisationOptions.Comment,
-                                Value: objSegment.Value,
-                                SourceLineIndex: intSourceLineIndex
-                            });
+                            if (isCommentWithinStylePropertyValue(arrFragments.length > 0 ? arrFragments[arrFragments.length - 1] : null, objSegmentEnumerator)) {
+                                // If this comment is a commented-out section of a property value (eg. "color: /*red*/ value;") then, in order to accurately represent
+                                // the input in the model that we have (that groups style property values together into a single fragment, along with a reference to
+                                // the style property name), the comment has to be considered part of the style property value. If this behaviour is not desired
+                                // (if, for example, this parsing step is used to minify content) then the argument may be set that excludes comments.
+                                objStylePropertyValueBuffer.Add(objLastStylePropertyName, forceIntoMultiLineComment(objSegment.Value), intSelectorOrStyleStartSourceLineIndex);
+                            } else {
+                                arrFragments.push({
+                                    FragmentCategorisation: FragmentCategorisationOptions.Comment,
+                                    Value: objSegment.Value,
+                                    SourceLineIndex: intSourceLineIndex
+                                });
+                            }
                         }
                         intSourceLineIndex += getNumberOfLineReturnsFromContentIfAny(objSegment.Value);
                         break;
