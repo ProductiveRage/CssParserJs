@@ -804,7 +804,7 @@
 
                     case CssParserJs.CharacterCategorisationOptions.OpenBrace:
                         if (arrSelectorOrStyleContentBuffer.length === 0) {
-                            throw new ParseError("Encountered OpenBrace with no preceding selector at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
+                            throw new ParseError("Encountered OpenBrace with no preceding selector", objSegment.IndexInSource);
                         }
 
                         // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
@@ -815,7 +815,7 @@
 
                         arrSelectors = getSelectorSet(arrSelectorOrStyleContentBuffer.join(""));
                         if (arrSelectors.length === 0) {
-                            throw new ParseError("Open brace encountered with no leading selector content at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
+                            throw new ParseError("Open brace encountered with no leading selector content", objSegment.IndexInSource);
                         }
                         objParsedNestedData = parseIntoStructuredDataPartial(
                             objSegmentEnumerator,
@@ -839,10 +839,7 @@
 
                     case CssParserJs.CharacterCategorisationOptions.CloseBrace:
                         if (intDepth === 0) {
-                            throw new ParseError(
-                                "Encountered unexpected close brace (on line " + (intSourceLineIndex + 1) + ")",
-                                objSegment.IndexInSource
-                            );
+                            throw new ParseError("Encountered unexpected close brace", objSegment.IndexInSource);
                         }
                             
                         // If we were building up content for a StylePropertyValue then encountering other content means that the value must have terminated (for valid
@@ -915,7 +912,7 @@
                             arrSelectorOrStyleContentBuffer = [];
                         }
                         if (!objLastStylePropertyName) {
-                            throw new ParseError("Invalid content, orphan style property value encountered at line " + (intSourceLineIndex + 1), objSegment.IndexInSource);
+                            throw new ParseError("Invalid content, orphan style property value encountered", objSegment.IndexInSource);
                         }
                         objStylePropertyValueBuffer.Add(objLastStylePropertyName, objSegment.Value, intSelectorOrStyleStartSourceLineIndex);
                         break;
@@ -966,10 +963,7 @@
                             } else {
                                 intLastFragmentLineIndex = 0;
                             }
-                            throw new ParseError(
-                                "Encountered unexpected content (after line " + (intLastFragmentLineIndex + 1) + ") - this is often caused by mismatched opening or closing braces",
-                                objSegment.IndexInSource
-                            );
+                            throw new ParseError("Encountered unexpected content - this is often caused by mismatched opening or closing braces", objSegment.IndexInSource);
                         }
                     }
                     return objParsedData.Fragments;
