@@ -891,7 +891,6 @@
             return {
                 ParseIntoStructuredData: function (arrSegments, bExcludeComments) {
                     var objSegmentEnumerator = getSegmentEnumerator(arrSegments),
-                        bExcludeComments,
                         objParsedData = parseIntoStructuredDataPartial(objSegmentEnumerator, bExcludeComments, [], 0, 0),
                         objSegment,
                         intLastFragmentLineIndex;
