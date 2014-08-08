@@ -4,7 +4,7 @@
   "homepage": "https://bitbucket.org/DanRoberts/cssparserjs",
   "author": "Dan Roberts <dangger36@gmail.com>",
   "main": "CssParserJs.js",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "devDependencies": {
     "phantomjs": "1.9.7-1"
   },
